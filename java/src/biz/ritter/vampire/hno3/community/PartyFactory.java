@@ -5,6 +5,8 @@
 
 package biz.ritter.vampire.hno3.community;
 
+import java.lang.reflect.Modifier;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -18,7 +20,41 @@ public class PartyFactory {
     switch (id) {
       case "Java" : {
         JavaParty coffeeToFly = new JavaParty();
-        coffeeToFly.lookingForMember();
+        
+        List<Module> module = coffeeToFly.getModules("^java\\.base$");
+        List<String> moduleClassName = coffeeToFly.lookingForJavaOuterClassMember(module);
+        List<Class<?>> classes = coffeeToFly.getSpecialClasses (moduleClassName);
+        
+        
+        // java.io.FileCleanable ist package protected
+        for (Class<?> c : classes) {
+          if (c.isInterface()) {
+            System.err.println("= Interface "+c.getName()+" =");
+            JavaMember member = new JavaMember(c);
+            System.out.println(member.getSign());
+            
+            PythonMember pm = new PythonMember(member.getSign());
+            System.out.println(pm.getSign());
+            System.out.println(pm.getCard());
+          }
+          else if (Modifier.isAbstract(c.getModifiers())) {
+/*            JavaMember member = new JavaMember(c);
+            System.out.println(member.getSign());
+            System.err.printf("Abstract class %s%n",c.getName());
+*/          }
+          else if (c.isEnum()) {
+/*            JavaMember member = new JavaMember(c);
+            System.out.println(member.getSign());
+            System.err.printf("Enum %s%n",c.getName());
+*/          }
+          else {
+/*            System.out.printf("Class %s%n",c.getName());
+*/          }
+          Thread.yield();
+          
+          c.getDeclaredConstructors(); // needed because protected protected constructors not in getConstructors() inkluded
+        }
+
         result = Optional.of(coffeeToFly);
         break;
       }
