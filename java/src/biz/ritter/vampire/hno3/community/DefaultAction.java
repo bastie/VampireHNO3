@@ -46,7 +46,7 @@ public class DefaultAction {
     this.setName(action.getString("name"));
     this.setResult(action.getString("result"));
     this.setPublicity(action.getString("visible"));
-    this.setIntended("fully abstract".equals(action.getString("type")));
+    this.setIntended(AbstractMember.TYPE_FULL_ABSTRACT.equals(action.getString("type")));
   }
   
   ////////// helper methods /////////////

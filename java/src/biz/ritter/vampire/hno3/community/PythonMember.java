@@ -51,15 +51,28 @@ public class PythonMember extends DefaultAbstractMember {
       source.append("import abc\n");
       source.append("\n\n");
     }
+    final boolean ABSTRACT_METHODS_DETECTED = ! this.actions.stream().filter(value -> value.isIntended()).collect(Collectors.toList()).isEmpty();
+    if (ABSTRACT_METHODS_DETECTED) {
+      source.append (this.getMetaTypeCard(stage));
+      source.append("\n\n");
+    }
+    source.append (this.getTypeCard(stage, ABSTRACT_METHODS_DETECTED));
+    return source.toString();
+  }
+  /*
+   * Meta type have the same name as type but with suffix "_MetaType"
+   */
+  protected String getMetaTypeCard (int stage) {
+    StringBuilder source = new StringBuilder ();
     // type
-    source.append("class "+this.getName()+"():\n");
+    source.append("class "+this.getName()+"_MetaType(metaclass=abc.ABCMeta):\n");
     stage++;
     source.append(intent(stage)).append("'''\n");
     source.append(intent(stage)).append("Clean room PythonVampire generated source\n");
     source.append(intent(stage)).append("'''\n");
     source.append("\n");
     // interface / abstract methods
-    stage++; // GOSUP to inner class definitions
+    // GOSUP to inner class definitions
     final boolean INTENDED_ACTION_DETECTED = ! this.actions.stream().filter(value -> value.isIntended()).collect(Collectors.toList()).isEmpty();
     if (INTENDED_ACTION_DETECTED) {
       source.append(intent(stage)).append("@classmethod\n");
@@ -87,16 +100,72 @@ public class PythonMember extends DefaultAbstractMember {
       }
       stage--; // RETURN from inner method implementations
     }
+    //for (DefaultAction action : this.actions) {
+      // in Python interface only the default methods will be implemented
+      final List<DefaultAction> abstractInterfaceActions = this.actions.stream().filter(value -> value.isIntended()).collect(Collectors.toList());
+      for (DefaultAction abstractAction : abstractInterfaceActions) {
+        source.append(intent(stage)).append("@abc.abstractmethod\n");
+// FIXME: Java interface class methods - for example CharSequence.compare       
+        final String FIRST_PARAM = "self"; 
+        source.append(intent(stage)).append("def "+abstractAction.getName()+" ("+FIRST_PARAM+"):\n");
+        stage++; // GOSUP in inner method implementation
+        source.append(intent(stage)).append("raise NotImplementedError\n");
+        stage--; // RETURN from inner method implementation
+      }
+    //}
+    stage--; // RETURN from method implementation
+    // last line
+    stage--; // RETURN from inner class definitions
+    
+    return source.toString();
+  }
+  
+  /*
+   * Type implementation 
+   */
+  protected String getTypeCard (int stage, final boolean HAS_ABSTRACT_METHODS) {
+    StringBuilder source = new StringBuilder ();
+    // type
+    source.append("class "+this.getName()+"(");
+    source.append(HAS_ABSTRACT_METHODS ? this.getName()+"_MetaType" : ""); //not needed but fine declared
+    source.append("):\n");
+    stage++;
+    source.append(intent(stage)).append("'''\n");
+    source.append(intent(stage)).append("Clean room PythonVampire generated source\n");
+    source.append(intent(stage)).append("'''\n");
+    source.append("\n");
     
     // fields 
     
     // methods
-    
+    // GOSUP to method implementation
+    //for (DefaultAction action : this.actions) {
+      final boolean IS_INTERFACE = TYPE_FULL_ABSTRACT.equals(this.getType());
+      if (IS_INTERFACE) {
+        // in Python interface only the default methods will be implemented
+        final List<DefaultAction> defaultInterfaceActions = this.actions.stream()
+            .filter(value -> value.isImplemented())
+            .filter(value -> !value.getName().startsWith("lambda$"))
+            .collect(Collectors.toList());
+        for (DefaultAction defaultImplementation : defaultInterfaceActions) {
+          final String FIRST_PARAM = "self"; // Java interface cannot have class methods
+          source.append(intent(stage)).append("def "+defaultImplementation.getName()+" ("+FIRST_PARAM+"):\n");
+          stage++; // GOSUP in inner method implementation
+          source.append(intent(stage)).append("pass\n");
+          stage--; // RETURN from inner method implementation
+        }
+      }
+      else { // ! IS_INTERFACE
+        
+      }
+      
+    //}
+    stage--; // RETURN from method implementation
     
     // last line
     
-    stage++; // RETURN from inner class definitions
-    assert (0 == stage);
+    stage--; // RETURN from inner class definitions
+    
     return source.toString();
   }
 
